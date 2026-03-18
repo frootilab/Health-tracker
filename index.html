@@ -370,7 +370,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--t1);min-height:100
     </div>
     <button class="btn-demo" onclick="loadDemo()">✦ Try with demo data</button>
     <p class="auth-note">
-      Replace <code>YOUR_FITBIT_CLIENT_ID</code> and <code>YOUR_STRAVA_CLIENT_ID</code> in the source.<br>
+      Replace <code>D3PTKZ</code> and <code>YOUR_STRAVA_CLIENT_ID</code> in the source.<br>
       Fitbit: <a href="https://dev.fitbit.com" style="color:var(--cyan)">dev.fitbit.com</a> &nbsp;·&nbsp;
       Strava: <a href="https://www.strava.com/settings/api" style="color:var(--strava)">strava.com/settings/api</a>
     </p>
@@ -495,7 +495,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--t1);min-height:100
 
 <script>
 // ─── CONFIG ───────────────────────────────────────────────────────────────
-const FITBIT_CID = 'YOUR_FITBIT_CLIENT_ID';
+const FITBIT_CID = 'D3PTKZ';
 const STRAVA_CID = 'YOUR_STRAVA_CLIENT_ID';
 const REDIRECT = location.href.split('?')[0].split('#')[0];
 
@@ -505,7 +505,7 @@ let fitbitToken = null, stravaToken = null;
 
 // ─── OAUTH ────────────────────────────────────────────────────────────────
 function connectFitbit() {
-  if (FITBIT_CID === 'YOUR_FITBIT_CLIENT_ID') { toast('ℹ️ No Client ID set — loading demo data'); loadDemo(); return; }
+  if (FITBIT_CID === 'D3PTKZ') { toast('ℹ️ No Client ID set — loading demo data'); loadDemo(); return; }
   location.href = `https://www.fitbit.com/oauth2/authorize?response_type=token&client_id=${FITBIT_CID}&redirect_uri=${encodeURIComponent(REDIRECT)}&scope=${encodeURIComponent('activity heartrate sleep weight nutrition profile')}&expires_in=604800`;
 }
 

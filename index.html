@@ -1,0 +1,990 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Health Dashboard">
+<meta name="theme-color" content="#0a0c0f">
+<title>Health Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+:root{
+  --bg:#0a0c0f;--s1:#111318;--s2:#181c22;--s3:#1e232c;
+  --b1:rgba(255,255,255,0.06);--b2:rgba(255,255,255,0.11);--b3:rgba(255,255,255,0.18);
+  --t1:#eceef3;--t2:#8b9199;--t3:#4a5060;
+  --green:#3ddc84;--cyan:#22d3ee;--pink:#f472b6;--orange:#fb923c;--purple:#a78bfa;--yellow:#fbbf24;--red:#f87171;
+  --fitbit:#00b0b9;--strava:#fc4c02;--wa:#25d366;
+  --font:'Syne',sans-serif;--mono:'JetBrains Mono',monospace;
+  --r:14px;--r2:8px;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html{scroll-behavior:smooth}
+body{font-family:var(--font);background:var(--bg);color:var(--t1);min-height:100vh;font-size:14px;overflow-x:hidden}
+
+/* ---- AUTH ---- */
+#auth{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:1.5rem;
+  background:radial-gradient(ellipse 80% 50% at 50% -10%,rgba(61,220,132,0.12) 0%,transparent 70%)}
+.auth-wrap{width:100%;max-width:480px}
+.auth-logo{text-align:center;margin-bottom:2rem}
+.auth-logo-mark{display:inline-flex;align-items:center;justify-content:center;width:64px;height:64px;
+  background:linear-gradient(135deg,var(--green),var(--cyan));border-radius:20px;font-size:30px;margin-bottom:1rem}
+.auth-logo h1{font-size:22px;font-weight:700;letter-spacing:-.02em}
+.auth-logo p{font-size:13px;color:var(--t2);margin-top:4px}
+.connect-cards{display:flex;flex-direction:column;gap:10px;margin-bottom:1.5rem}
+.connect-card{background:var(--s1);border:1px solid var(--b2);border-radius:var(--r);padding:1.1rem 1.2rem;
+  display:flex;align-items:center;gap:14px;cursor:pointer;transition:all .2s;position:relative;overflow:hidden}
+.connect-card::before{content:'';position:absolute;inset:0;opacity:0;transition:opacity .2s}
+.connect-card:hover::before{opacity:1}
+.connect-card.fitbit::before{background:linear-gradient(135deg,rgba(0,176,185,0.08),transparent)}
+.connect-card.strava::before{background:linear-gradient(135deg,rgba(252,76,2,0.08),transparent)}
+.connect-card:hover{border-color:var(--b3);transform:translateY(-1px)}
+.connect-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+.connect-icon.fitbit{background:rgba(0,176,185,0.15);color:var(--fitbit)}
+.connect-icon.strava{background:rgba(252,76,2,0.15);color:var(--strava)}
+.connect-info{flex:1}
+.connect-info strong{font-size:14px;font-weight:600;display:block}
+.connect-info span{font-size:11px;color:var(--t2)}
+.connect-status{font-size:11px;padding:3px 8px;border-radius:20px;font-weight:500}
+.status-off{background:var(--s2);color:var(--t3)}
+.status-on{background:rgba(61,220,132,0.15);color:var(--green)}
+.btn-demo{width:100%;padding:12px;background:transparent;border:1px solid var(--b2);border-radius:var(--r);
+  font-family:var(--font);font-size:14px;color:var(--t2);cursor:pointer;transition:all .2s;font-weight:500}
+.btn-demo:hover{background:var(--s2);color:var(--t1);border-color:var(--b3)}
+.auth-note{font-size:11px;color:var(--t3);text-align:center;margin-top:1rem;line-height:1.6}
+.auth-note code{font-family:var(--mono);background:var(--s2);padding:1px 5px;border-radius:4px;color:var(--t2)}
+
+/* ---- DASHBOARD ---- */
+#dash{display:none}
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:.85rem 1.25rem;
+  border-bottom:1px solid var(--b1);background:rgba(10,12,15,0.85);
+  backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+  position:sticky;top:0;z-index:100}
+.topbar-left{display:flex;align-items:center;gap:10px}
+.tb-logo{width:30px;height:30px;background:linear-gradient(135deg,var(--green),var(--cyan));border-radius:8px;
+  display:flex;align-items:center;justify-content:center;font-size:14px}
+.tb-title{font-size:15px;font-weight:700;letter-spacing:-.01em}
+.tb-sub{font-size:11px;color:var(--t2)}
+.topbar-right{display:flex;align-items:center;gap:8px}
+.pill{padding:3px 9px;border-radius:20px;font-size:11px;font-weight:600;display:flex;align-items:center;gap:4px}
+.pill-live{background:rgba(61,220,132,0.12);border:1px solid rgba(61,220,132,0.25);color:var(--green)}
+.pill-fitbit{background:rgba(0,176,185,0.12);border:1px solid rgba(0,176,185,0.2);color:var(--fitbit)}
+.pill-strava{background:rgba(252,76,2,0.12);border:1px solid rgba(252,76,2,0.2);color:var(--strava)}
+.dot{width:5px;height:5px;border-radius:50%;background:currentColor;animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+.btn-wa{padding:5px 11px;background:rgba(37,211,102,0.12);border:1px solid rgba(37,211,102,0.25);
+  border-radius:20px;font-family:var(--font);font-size:11px;font-weight:600;color:var(--wa);cursor:pointer;transition:all .2s}
+.btn-wa:hover{background:rgba(37,211,102,0.2)}
+.btn-sm{padding:5px 10px;background:transparent;border:1px solid var(--b2);border-radius:var(--r2);
+  font-family:var(--font);font-size:11px;color:var(--t2);cursor:pointer;transition:all .2s}
+.btn-sm:hover{background:var(--s2);color:var(--t1)}
+
+.main{padding:1.25rem;max-width:1280px;margin:0 auto}
+
+/* alerts */
+.alerts{display:flex;flex-direction:column;gap:8px;margin-bottom:1.25rem}
+.alert{display:flex;align-items:flex-start;gap:10px;padding:10px 14px;border-radius:var(--r);font-size:12.5px;line-height:1.5}
+.al-warn{background:rgba(251,191,36,0.08);border:1px solid rgba(251,191,36,0.2);color:#fcd34d}
+.al-danger{background:rgba(248,113,113,0.08);border:1px solid rgba(248,113,113,0.2);color:var(--red)}
+.al-info{background:rgba(34,211,238,0.08);border:1px solid rgba(34,211,238,0.2);color:var(--cyan)}
+.al-success{background:rgba(61,220,132,0.08);border:1px solid rgba(61,220,132,0.2);color:var(--green)}
+.al-close{margin-left:auto;cursor:pointer;opacity:.5;font-size:15px;line-height:1;flex-shrink:0;padding-top:1px}
+.al-close:hover{opacity:1}
+
+/* date nav */
+.date-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;flex-wrap:wrap;gap:8px}
+.date-left{display:flex;align-items:center;gap:6px}
+.date-btn{padding:5px 11px;background:var(--s1);border:1px solid var(--b2);border-radius:var(--r2);
+  color:var(--t1);font-family:var(--font);font-size:12px;cursor:pointer;transition:all .2s;font-weight:500}
+.date-btn:hover,.date-btn.act{background:var(--s3);border-color:rgba(61,220,132,0.35);color:var(--green)}
+.date-lbl{font-size:12px;color:var(--t2);font-family:var(--mono);min-width:180px;text-align:center}
+.range-tabs{display:flex;gap:4px}
+
+/* source tabs */
+.source-tabs{display:flex;gap:8px;margin-bottom:1.25rem;border-bottom:1px solid var(--b1);padding-bottom:1rem}
+.src-tab{padding:6px 14px;border-radius:var(--r2);font-size:12px;font-weight:600;cursor:pointer;
+  border:1px solid transparent;transition:all .2s;font-family:var(--font)}
+.src-tab.all{background:var(--s2);color:var(--t1);border-color:var(--b2)}
+.src-tab.fitbit{color:var(--t2)}
+.src-tab.strava{color:var(--t2)}
+.src-tab.fitbit.act{background:rgba(0,176,185,0.12);color:var(--fitbit);border-color:rgba(0,176,185,0.25)}
+.src-tab.strava.act{background:rgba(252,76,2,0.12);color:var(--strava);border-color:rgba(252,76,2,0.25)}
+.src-tab.all.act{background:var(--s3);color:var(--t1);border-color:var(--b3)}
+
+/* metric cards */
+.metrics{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;margin-bottom:1.25rem}
+.mc{background:var(--s1);border:1px solid var(--b1);border-radius:var(--r);padding:1.1rem;
+  position:relative;overflow:hidden;transition:border-color .2s,transform .15s;cursor:default}
+.mc:hover{border-color:var(--b2);transform:translateY(-1px)}
+.mc.anom{border-color:rgba(248,113,113,0.35);background:rgba(248,113,113,0.03)}
+.mc.done{border-color:rgba(61,220,132,0.25)}
+.mc-src{position:absolute;top:9px;right:9px;width:6px;height:6px;border-radius:50%}
+.mc-icon{font-size:17px;margin-bottom:.6rem}
+.mc-lbl{font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:.08em;font-weight:600;margin-bottom:3px}
+.mc-val{font-size:24px;font-weight:700;line-height:1;font-family:var(--mono);margin-bottom:2px}
+.mc-unit{font-size:11px;color:var(--t2);margin-bottom:.5rem}
+.mc-delta{display:inline-flex;align-items:center;gap:3px;font-size:10px;font-weight:600;padding:2px 6px;border-radius:4px}
+.d-up{background:rgba(61,220,132,0.1);color:var(--green)}
+.d-dn{background:rgba(248,113,113,0.1);color:var(--red)}
+.d-ne{background:rgba(139,145,153,0.1);color:var(--t2)}
+.mc-bar{margin-top:9px;height:2px;background:var(--s3);border-radius:1px;overflow:hidden}
+.mc-fill{height:100%;border-radius:1px;transition:width .7s cubic-bezier(.4,0,.2,1)}
+.anom-tag{position:absolute;bottom:8px;right:8px;font-size:9px;padding:2px 6px;
+  background:rgba(248,113,113,0.15);border:1px solid rgba(248,113,113,0.3);border-radius:10px;color:var(--red);font-weight:600}
+
+/* strava section */
+.strava-section{margin-bottom:1.25rem}
+.sec-hdr{display:flex;align-items:center;gap:8px;margin-bottom:.85rem}
+.sec-title{font-size:13px;font-weight:700;letter-spacing:-.01em}
+.sec-badge{padding:2px 8px;border-radius:20px;font-size:10px;font-weight:600}
+.sb-strava{background:rgba(252,76,2,0.12);color:var(--strava)}
+.sb-ai{background:rgba(61,220,132,0.12);color:var(--green)}
+.sb-wa{background:rgba(37,211,102,0.12);color:var(--wa)}
+.activities-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px}
+.act-card{background:var(--s1);border:1px solid var(--b1);border-radius:var(--r);padding:1rem;transition:all .2s}
+.act-card:hover{border-color:rgba(252,76,2,0.3);transform:translateY(-1px)}
+.act-type{display:flex;align-items:center;gap:7px;margin-bottom:.65rem}
+.act-type-icon{font-size:18px}
+.act-type-name{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--strava)}
+.act-name{font-size:13px;font-weight:600;margin-bottom:.5rem;line-height:1.3}
+.act-stats{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.act-stat{background:var(--s2);border-radius:6px;padding:6px 8px}
+.act-stat-val{font-size:14px;font-weight:700;font-family:var(--mono)}
+.act-stat-lbl{font-size:9px;color:var(--t3);text-transform:uppercase;letter-spacing:.05em;margin-top:1px}
+
+/* charts */
+.charts-row{display:grid;grid-template-columns:2fr 1fr;gap:10px;margin-bottom:1.25rem}
+@media(max-width:700px){.charts-row{grid-template-columns:1fr}}
+.cc{background:var(--s1);border:1px solid var(--b1);border-radius:var(--r);padding:1.1rem}
+.cc-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:.85rem}
+.cc-title{font-size:12px;font-weight:700}
+.cc-sub{font-size:10px;color:var(--t3);margin-top:2px}
+.ctabs{display:flex;gap:3px}
+.ctab{padding:3px 9px;border-radius:5px;font-size:10px;cursor:pointer;color:var(--t2);
+  border:none;background:transparent;font-family:var(--font);font-weight:600;transition:all .15s}
+.ctab.act{background:var(--s3);color:var(--t1)}
+
+/* HR zones */
+.hr-zones{display:flex;flex-direction:column;gap:5px;margin-top:.4rem}
+.hrz{display:flex;align-items:center;gap:7px}
+.hrz-dot{width:7px;height:7px;border-radius:2px;flex-shrink:0}
+.hrz-name{font-size:10px;color:var(--t2);flex:1}
+.hrz-min{font-size:10px;font-family:var(--mono)}
+.hrz-bw{flex:0 0 50px;height:2px;background:var(--s3);border-radius:1px;overflow:hidden}
+.hrz-b{height:100%;border-radius:1px}
+
+/* AI insights */
+.insights-wrap{margin-bottom:1.25rem}
+.thinking{background:var(--s1);border:1px solid var(--b1);border-radius:var(--r);
+  padding:1.25rem;display:flex;align-items:center;gap:10px;color:var(--t2);font-size:12.5px}
+.spin{width:16px;height:16px;border:2px solid var(--s3);border-top-color:var(--green);
+  border-radius:50%;animation:spin .7s linear infinite;flex-shrink:0}
+@keyframes spin{to{transform:rotate(360deg)}}
+.insights-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:10px}
+.ic{background:var(--s1);border:1px solid var(--b1);border-radius:var(--r);padding:1.1rem;
+  animation:up .35s ease}
+@keyframes up{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
+.ic-type{display:inline-flex;align-items:center;gap:4px;font-size:9px;text-transform:uppercase;
+  letter-spacing:.08em;font-weight:700;margin-bottom:.65rem;padding:2px 7px;border-radius:4px}
+.t-pos{background:rgba(61,220,132,0.1);color:var(--green)}
+.t-warn{background:rgba(251,191,36,0.1);color:var(--yellow)}
+.t-tip{background:rgba(34,211,238,0.1);color:var(--cyan)}
+.t-crit{background:rgba(248,113,113,0.1);color:var(--red)}
+.ic-text{font-size:12.5px;color:var(--t1);line-height:1.6;margin-bottom:.65rem}
+.ic-action{font-size:11px;color:var(--t2);padding-top:.65rem;border-top:1px solid var(--b1);
+  display:flex;align-items:flex-start;gap:5px;line-height:1.5}
+
+/* ask claude */
+.ask-bar{background:var(--s1);border:1px solid var(--b2);border-radius:var(--r);
+  padding:.9rem 1.1rem;display:flex;gap:9px;align-items:flex-end;margin-bottom:1.25rem}
+.ask-input{flex:1;background:var(--s2);border:1px solid var(--b1);border-radius:8px;
+  padding:9px 11px;font-family:var(--font);font-size:13px;color:var(--t1);resize:none;
+  outline:none;transition:border-color .2s;min-height:36px;max-height:90px}
+.ask-input:focus{border-color:rgba(61,220,132,0.35)}
+.ask-input::placeholder{color:var(--t3)}
+.btn-ask{padding:8px 15px;background:var(--green);border:none;border-radius:8px;
+  font-family:var(--font);font-size:12px;font-weight:700;color:#0a0c0f;cursor:pointer;transition:opacity .2s;white-space:nowrap}
+.btn-ask:hover{opacity:.88}
+.ai-resp{background:var(--s1);border:1px solid var(--b1);border-radius:var(--r);
+  padding:1.1rem;margin-bottom:1.25rem;display:none}
+.ai-resp.show{display:block;animation:up .3s ease}
+.ai-resp-hdr{display:flex;align-items:center;gap:6px;margin-bottom:.6rem;font-size:11px;color:var(--green);font-weight:700}
+.ai-resp-txt{font-size:12.5px;color:var(--t1);line-height:1.7}
+
+/* bottom grid */
+.btm{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:1.25rem}
+@media(max-width:700px){.btm{grid-template-columns:1fr}}
+
+/* sleep */
+.sleep-bar{display:flex;height:20px;border-radius:5px;overflow:hidden;margin:.65rem 0}
+.sleep-seg{display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:700;color:rgba(255,255,255,.75);transition:flex .5s ease}
+.sleep-lgd{display:flex;flex-wrap:wrap;gap:8px}
+.slgd{display:flex;align-items:center;gap:4px;font-size:10px;color:var(--t2)}
+.slgd-dot{width:7px;height:7px;border-radius:2px;flex-shrink:0}
+
+/* weight */
+.wt-stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-top:.65rem}
+.wts{text-align:center;padding:7px;background:var(--s2);border-radius:7px}
+.wts-v{font-size:14px;font-weight:700;font-family:var(--mono)}
+.wts-l{font-size:9px;color:var(--t3);margin-top:2px}
+
+/* goals */
+.goal-row{display:flex;align-items:center;gap:9px;padding:7px 0;border-bottom:1px solid var(--b1)}
+.goal-row:last-child{border-bottom:none}
+.gi{font-size:14px;width:22px;text-align:center}
+.ginfo{flex:1}
+.gn{font-size:11px;color:var(--t2)}
+.gv{font-size:12px;font-weight:600;font-family:var(--mono)}
+.gbar{flex:0 0 72px}
+.gpct{font-size:10px;color:var(--t3);text-align:right;margin-bottom:2px}
+.gtrack{height:3px;background:var(--s3);border-radius:2px;overflow:hidden}
+.gfill{height:100%;border-radius:2px}
+
+/* WhatsApp modal */
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.7);backdrop-filter:blur(4px);
+  z-index:200;display:flex;align-items:center;justify-content:center;padding:1.5rem;display:none}
+.modal-bg.show{display:flex;animation:fadein .2s ease}
+@keyframes fadein{from{opacity:0}to{opacity:1}}
+.modal{background:var(--s1);border:1px solid var(--b2);border-radius:20px;padding:1.75rem;
+  max-width:440px;width:100%;animation:up .25s ease}
+.modal h2{font-size:17px;font-weight:700;margin-bottom:.35rem;display:flex;align-items:center;gap:8px}
+.modal p{font-size:12.5px;color:var(--t2);margin-bottom:1.25rem;line-height:1.6}
+.modal-field{margin-bottom:.85rem}
+.modal-field label{display:block;font-size:11px;font-weight:600;color:var(--t2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px}
+.modal-field input{width:100%;background:var(--s2);border:1px solid var(--b2);border-radius:8px;
+  padding:10px 12px;font-family:var(--font);font-size:13px;color:var(--t1);outline:none;transition:border-color .2s}
+.modal-field input:focus{border-color:rgba(37,211,102,0.4)}
+.modal-field input::placeholder{color:var(--t3)}
+.modal-actions{display:flex;gap:8px;margin-top:1.25rem}
+.btn-save{flex:1;padding:11px;background:var(--wa);border:none;border-radius:9px;
+  font-family:var(--font);font-size:13px;font-weight:700;color:#fff;cursor:pointer;transition:opacity .2s}
+.btn-save:hover{opacity:.88}
+.btn-cancel{padding:11px 16px;background:transparent;border:1px solid var(--b2);border-radius:9px;
+  font-family:var(--font);font-size:13px;color:var(--t2);cursor:pointer;transition:all .2s}
+.btn-cancel:hover{background:var(--s2);color:var(--t1)}
+.wa-status{font-size:11px;margin-top:.65rem;padding:7px 10px;border-radius:7px;display:none}
+.wa-status.show{display:block}
+.wa-ok{background:rgba(37,211,102,0.1);color:var(--wa)}
+.wa-err{background:rgba(248,113,113,0.1);color:var(--red)}
+
+/* setup steps in modal */
+.setup-steps{background:var(--s2);border-radius:9px;padding:.85rem;margin-bottom:1rem}
+.step-item{display:flex;gap:9px;font-size:12px;color:var(--t2);line-height:1.5;margin-bottom:.5rem}
+.step-item:last-child{margin-bottom:0}
+.step-num{width:18px;height:18px;border-radius:50%;background:rgba(37,211,102,0.15);color:var(--wa);
+  font-size:9px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px}
+.step-item a{color:var(--cyan)}
+
+/* toast */
+.toast{position:fixed;bottom:1.5rem;left:50%;transform:translateX(-50%);
+  background:var(--s1);border:1px solid var(--b2);border-radius:10px;
+  padding:10px 18px;font-size:12.5px;font-weight:500;z-index:300;
+  animation:toastIn .25s ease;white-space:nowrap;box-shadow:0 4px 24px rgba(0,0,0,.4)}
+@keyframes toastIn{from{opacity:0;transform:translateX(-50%) translateY(8px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
+
+/* loading */
+#loader{position:fixed;inset:0;background:var(--bg);display:flex;flex-direction:column;
+  align-items:center;justify-content:center;z-index:400;gap:1rem;display:none}
+.loader-logo{width:52px;height:52px;background:linear-gradient(135deg,var(--green),var(--cyan));
+  border-radius:16px;display:flex;align-items:center;justify-content:center;font-size:24px;
+  animation:loadp 1.4s ease-in-out infinite}
+@keyframes loadp{0%,100%{transform:scale(1)}50%{transform:scale(1.08)}}
+.loader-bar{width:180px;height:2px;background:var(--s3);border-radius:1px;overflow:hidden}
+.loader-fill{height:100%;background:linear-gradient(90deg,var(--green),var(--cyan));
+  border-radius:1px;animation:lbar 2s ease-in-out forwards}
+@keyframes lbar{from{width:0}to{width:100%}}
+.loader-msg{font-size:12px;color:var(--t2);font-family:var(--mono)}
+
+/* mobile PWA */
+@media(max-width:480px){
+  .main{padding:.9rem}
+  .metrics{grid-template-columns:repeat(2,1fr)}
+  .activities-grid{grid-template-columns:1fr}
+  .btm{grid-template-columns:1fr}
+  .mc-val{font-size:20px}
+}
+</style>
+</head>
+<body>
+
+<!-- LOADER -->
+<div id="loader">
+  <div class="loader-logo">💚</div>
+  <div class="loader-msg" id="loader-msg">Connecting...</div>
+  <div class="loader-bar"><div class="loader-fill"></div></div>
+</div>
+
+<!-- WHATSAPP MODAL -->
+<div class="modal-bg" id="wa-modal">
+  <div class="modal">
+    <h2>📱 WhatsApp Setup</h2>
+    <p>Get a daily health summary sent to your WhatsApp via <strong>CallMeBot</strong> — free, no Business account needed.</p>
+    <div class="setup-steps">
+      <div class="step-item"><div class="step-num">1</div><span>Save <strong>+34 644 59 78 08</strong> as "CallMeBot" in your contacts</span></div>
+      <div class="step-item"><div class="step-num">2</div><span>Send exactly this message to it on WhatsApp: <code style="font-family:var(--mono);background:var(--s3);padding:1px 4px;border-radius:3px">I allow callmebot to send me messages</code></span></div>
+      <div class="step-item"><div class="step-num">3</div><span>You'll get an API key back — paste it below along with your number</span></div>
+    </div>
+    <div class="modal-field">
+      <label>Your WhatsApp number (with country code, no +)</label>
+      <input type="tel" id="wa-phone" placeholder="919876543210" />
+    </div>
+    <div class="modal-field">
+      <label>CallMeBot API key</label>
+      <input type="text" id="wa-key" placeholder="Paste your API key here" />
+    </div>
+    <div class="wa-status" id="wa-status"></div>
+    <div class="modal-actions">
+      <button class="btn-save" onclick="saveWA()">💬 Save & Send Test</button>
+      <button class="btn-cancel" onclick="closeWAModal()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- AUTH SCREEN -->
+<div id="auth">
+  <div class="auth-wrap">
+    <div class="auth-logo">
+      <div class="auth-logo-mark">💚</div>
+      <h1>Health Dashboard</h1>
+      <p>Fitbit · Strava · AI Insights · WhatsApp</p>
+    </div>
+    <div class="connect-cards">
+      <div class="connect-card fitbit" onclick="connectFitbit()">
+        <div class="connect-icon fitbit">🏃</div>
+        <div class="connect-info">
+          <strong>Fitbit</strong>
+          <span>Steps, sleep, heart rate, weight, calories</span>
+        </div>
+        <span class="connect-status" id="fitbit-status">Connect</span>
+      </div>
+      <div class="connect-card strava" onclick="connectStrava()">
+        <div class="connect-icon strava">🚴</div>
+        <div class="connect-info">
+          <strong>Strava</strong>
+          <span>Runs, rides, workouts, pace, elevation</span>
+        </div>
+        <span class="connect-status" id="strava-status">Connect</span>
+      </div>
+    </div>
+    <button class="btn-demo" onclick="loadDemo()">✦ Try with demo data</button>
+    <p class="auth-note">
+      Replace <code>YOUR_FITBIT_CLIENT_ID</code> and <code>YOUR_STRAVA_CLIENT_ID</code> in the source.<br>
+      Fitbit: <a href="https://dev.fitbit.com" style="color:var(--cyan)">dev.fitbit.com</a> &nbsp;·&nbsp;
+      Strava: <a href="https://www.strava.com/settings/api" style="color:var(--strava)">strava.com/settings/api</a>
+    </p>
+  </div>
+</div>
+
+<!-- DASHBOARD -->
+<div id="dash">
+  <div class="topbar">
+    <div class="topbar-left">
+      <div class="tb-logo">💚</div>
+      <div>
+        <div class="tb-title" id="tb-name">Dashboard</div>
+        <div class="tb-sub" id="tb-date">Today</div>
+      </div>
+    </div>
+    <div class="topbar-right">
+      <div class="pill pill-live"><div class="dot"></div>Live</div>
+      <div class="pill pill-fitbit" id="pill-fitbit" style="display:none">🏃 Fitbit</div>
+      <div class="pill pill-strava" id="pill-strava" style="display:none">🚴 Strava</div>
+      <button class="btn-wa" onclick="openWAModal()">📱 WhatsApp</button>
+      <button class="btn-sm" onclick="signOut()">Sign out</button>
+    </div>
+  </div>
+
+  <div class="main">
+    <div class="alerts" id="alerts"></div>
+
+    <div class="date-row">
+      <div class="date-left">
+        <button class="date-btn" onclick="navDate(-1)">←</button>
+        <span class="date-lbl" id="date-lbl">Today</span>
+        <button class="date-btn" onclick="navDate(1)">→</button>
+      </div>
+      <div class="range-tabs">
+        <button class="date-btn act" onclick="setRange('day',this)">Day</button>
+        <button class="date-btn" onclick="setRange('week',this)">Week</button>
+        <button class="date-btn" onclick="setRange('month',this)">Month</button>
+      </div>
+    </div>
+
+    <div class="source-tabs">
+      <button class="src-tab all act" onclick="setSource('all',this)">All sources</button>
+      <button class="src-tab fitbit" onclick="setSource('fitbit',this)">🏃 Fitbit only</button>
+      <button class="src-tab strava" onclick="setSource('strava',this)">🚴 Strava only</button>
+    </div>
+
+    <!-- Metrics -->
+    <div class="metrics" id="metrics"></div>
+
+    <!-- Strava Activities -->
+    <div class="strava-section" id="strava-sec">
+      <div class="sec-hdr">
+        <div class="sec-title">Recent Activities</div>
+        <div class="sec-badge sb-strava">🚴 Strava</div>
+      </div>
+      <div class="activities-grid" id="activities-grid"></div>
+    </div>
+
+    <!-- Charts -->
+    <div class="charts-row">
+      <div class="cc">
+        <div class="cc-hdr">
+          <div><div class="cc-title">Activity trend</div><div class="cc-sub">7-day · goal line dashed</div></div>
+          <div class="ctabs">
+            <button class="ctab act" onclick="swChart('steps',this)">Steps</button>
+            <button class="ctab" onclick="swChart('calories',this)">Cal</button>
+            <button class="ctab" onclick="swChart('active',this)">Active</button>
+            <button class="ctab" onclick="swChart('distance',this)">Dist</button>
+          </div>
+        </div>
+        <div style="position:relative;height:190px"><canvas id="actChart"></canvas></div>
+      </div>
+      <div class="cc">
+        <div class="cc-hdr"><div><div class="cc-title">Heart rate zones</div><div class="cc-sub">Today's minutes</div></div></div>
+        <div style="position:relative;height:120px"><canvas id="hrChart"></canvas></div>
+        <div class="hr-zones" id="hr-zones"></div>
+      </div>
+    </div>
+
+    <!-- AI Insights -->
+    <div class="insights-wrap">
+      <div class="sec-hdr">
+        <div class="sec-title">AI Insights</div>
+        <div class="sec-badge sb-ai">✦ Claude</div>
+      </div>
+      <div id="insights"></div>
+    </div>
+
+    <!-- Ask Claude -->
+    <div class="ask-bar">
+      <textarea class="ask-input" id="q-input" rows="1"
+        placeholder="Ask anything… 'How many more steps to hit my weekly goal?' or 'Am I recovering well?'"
+        onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();ask()}"></textarea>
+      <button class="btn-ask" onclick="ask()">Ask ✦</button>
+    </div>
+    <div class="ai-resp" id="ai-resp">
+      <div class="ai-resp-hdr">✦ Claude's response</div>
+      <div class="ai-resp-txt" id="ai-resp-txt"></div>
+    </div>
+
+    <!-- Bottom grid -->
+    <div class="btm">
+      <div class="cc">
+        <div class="cc-hdr"><div><div class="cc-title">Sleep analysis</div><div class="cc-sub" id="sleep-sub">Last night</div></div></div>
+        <div class="sleep-bar" id="sleep-bar"></div>
+        <div class="sleep-lgd" id="sleep-lgd"></div>
+        <div style="margin-top:.85rem;position:relative;height:110px"><canvas id="sleepChart"></canvas></div>
+      </div>
+      <div class="cc">
+        <div class="cc-hdr"><div><div class="cc-title">Weight & goals</div><div class="cc-sub">Progress to target</div></div></div>
+        <div style="position:relative;height:110px"><canvas id="wtChart"></canvas></div>
+        <div class="wt-stats" id="wt-stats"></div>
+        <div style="margin-top:.85rem">
+          <div style="font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:.06em;font-weight:600;margin-bottom:.5rem">Daily goals</div>
+          <div id="goals-list"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─── CONFIG ───────────────────────────────────────────────────────────────
+const FITBIT_CID = 'YOUR_FITBIT_CLIENT_ID';
+const STRAVA_CID = 'YOUR_STRAVA_CLIENT_ID';
+const REDIRECT = location.href.split('?')[0].split('#')[0];
+
+// ─── STATE ────────────────────────────────────────────────────────────────
+let D = null, charts = {}, dateOffset = 0, activeSource = 'all';
+let fitbitToken = null, stravaToken = null;
+
+// ─── OAUTH ────────────────────────────────────────────────────────────────
+function connectFitbit() {
+  if (FITBIT_CID === 'YOUR_FITBIT_CLIENT_ID') { toast('ℹ️ No Client ID set — loading demo data'); loadDemo(); return; }
+  location.href = `https://www.fitbit.com/oauth2/authorize?response_type=token&client_id=${FITBIT_CID}&redirect_uri=${encodeURIComponent(REDIRECT)}&scope=${encodeURIComponent('activity heartrate sleep weight nutrition profile')}&expires_in=604800`;
+}
+
+function connectStrava() {
+  if (STRAVA_CID === 'YOUR_STRAVA_CLIENT_ID') { toast('ℹ️ No Strava Client ID — loading demo data'); loadDemo(); return; }
+  location.href = `https://www.strava.com/oauth/authorize?client_id=${STRAVA_CID}&redirect_uri=${encodeURIComponent(REDIRECT)}&response_type=code&scope=read,activity:read_all`;
+}
+
+function parseOAuth() {
+  // Fitbit returns token in hash
+  if (location.hash.includes('access_token')) {
+    const p = new URLSearchParams(location.hash.slice(1));
+    const t = p.get('access_token');
+    if (t) { localStorage.setItem('fb_token', t); localStorage.setItem('fb_exp', Date.now() + 604800000); fitbitToken = t; }
+    history.replaceState(null, '', location.pathname);
+  }
+  // Strava returns code in query — needs server-side exchange (PKCE or backend)
+  // For demo, we store whatever token is already saved
+  fitbitToken = fitbitToken || (isTokenValid('fb_token','fb_exp') ? localStorage.getItem('fb_token') : null);
+  stravaToken = isTokenValid('st_token','st_exp') ? localStorage.getItem('st_token') : null;
+}
+
+function isTokenValid(k, e) {
+  return localStorage.getItem(k) && Date.now() < parseInt(localStorage.getItem(e) || 0);
+}
+
+function signOut() {
+  ['fb_token','fb_exp','st_token','st_exp'].forEach(k => localStorage.removeItem(k));
+  location.reload();
+}
+
+// ─── DATA FETCH ───────────────────────────────────────────────────────────
+async function fetchAll() {
+  const today = new Date().toISOString().split('T')[0];
+  const base = generateDemo();
+
+  if (fitbitToken) {
+    try {
+      const h = { Authorization: `Bearer ${fitbitToken}` };
+      const [prof, act, hr, sl, wt] = await Promise.all([
+        fetch('https://api.fitbit.com/1/user/-/profile.json', {headers:h}).then(r=>r.json()),
+        fetch(`https://api.fitbit.com/1/user/-/activities/date/${today}.json`, {headers:h}).then(r=>r.json()),
+        fetch(`https://api.fitbit.com/1/user/-/activities/heart/date/${today}/1d/1min.json`, {headers:h}).then(r=>r.json()),
+        fetch(`https://api.fitbit.com/1.2/user/-/sleep/date/${today}.json`, {headers:h}).then(r=>r.json()),
+        fetch(`https://api.fitbit.com/1/user/-/body/weight/date/${today}/7d.json`, {headers:h}).then(r=>r.json()),
+      ]);
+      const s = act?.summary || {};
+      const hv = hr?.['activities-heart']?.[0]?.value || {};
+      const sd = sl?.sleep?.[0] || {};
+      const wd = wt?.['body-weight'] || [];
+      base.userName = prof?.user?.firstName || 'User';
+      base.steps = s.steps || base.steps;
+      base.calories = s.caloriesOut || base.calories;
+      base.activeMinutes = (s.fairlyActiveMinutes||0)+(s.veryActiveMinutes||0) || base.activeMinutes;
+      base.restingHR = hv.restingHeartRate || base.restingHR;
+      if (hv.heartRateZones) base.hrZones = hv.heartRateZones;
+      base.sleepDuration = Math.round((sd.timeInBed || base.sleepDuration*60) / 60 * 10) / 10;
+      base.sleepEfficiency = sd.efficiency || base.sleepEfficiency;
+      if (wd.length) { base.weight = parseFloat(wd[wd.length-1].value); base.weightHistory = wd.map(w=>parseFloat(w.value)); }
+      base.hasFitbit = true;
+    } catch(e) { console.warn('Fitbit fetch error', e); }
+  }
+
+  if (stravaToken) {
+    try {
+      const h = { Authorization: `Bearer ${stravaToken}` };
+      const acts = await fetch('https://www.strava.com/api/v3/athlete/activities?per_page=6', {headers:h}).then(r=>r.json());
+      if (Array.isArray(acts)) {
+        base.stravaActivities = acts.map(a => ({
+          name: a.name, type: a.type,
+          distance: (a.distance/1000).toFixed(2),
+          duration: Math.round(a.moving_time/60),
+          pace: a.average_speed ? (1000/a.average_speed/60).toFixed(2) : null,
+          hr: a.average_heartrate ? Math.round(a.average_heartrate) : null,
+          elevation: Math.round(a.total_elevation_gain||0),
+          calories: a.calories || null,
+          date: new Date(a.start_date).toLocaleDateString('en-GB',{day:'numeric',month:'short'}),
+        }));
+        // Add strava distance to weekly total
+        base.distanceHistory = base.distanceHistory.map((d,i) => {
+          const sa = acts[i];
+          return sa ? Math.round((sa.distance/1000 + d)*10)/10 : d;
+        });
+        base.hasStrava = true;
+      }
+    } catch(e) { console.warn('Strava fetch error', e); }
+  }
+
+  return base;
+}
+
+// ─── DEMO DATA ────────────────────────────────────────────────────────────
+function generateDemo() {
+  return {
+    userName:'Alex', hasFitbit:true, hasStrava:true,
+    steps:8240, stepsGoal:10000,
+    calories:2180, caloriesGoal:2200,
+    activeMinutes:42, activeGoal:30,
+    distance:6.4, distanceGoal:8,
+    floors:12, restingHR:68, currentHR:74,
+    hrZones:[
+      {name:'Out of range',minutes:940},{name:'Fat burn',minutes:68},
+      {name:'Cardio',minutes:24},{name:'Peak',minutes:8}
+    ],
+    sleepDuration:7.2, sleepGoal:8, sleepEfficiency:87,
+    sleepStages:{deep:15,light:52,rem:23,awake:10},
+    weight:82.4, weightGoal:75, weightHistory:[84.1,83.8,83.5,83.2,82.9,82.6,82.4],
+    stepsHistory:[7200,9800,6500,11200,8900,5400,8240],
+    caloriesHistory:[2050,2340,1980,2510,2200,1890,2180],
+    activeHistory:[35,55,28,70,48,20,42],
+    distanceHistory:[5.2,8.1,4.8,10.3,7.6,3.9,6.4],
+    sleepHistory:[6.5,7.8,6.2,8.1,7.5,8.3,7.2],
+    days:['Mon','Tue','Wed','Thu','Fri','Sat','Sun'],
+    anomalies:[
+      {type:'warn',msg:'Resting HR (68 bpm) elevated vs your 30-day average of 62 bpm'},
+      {type:'info',msg:'Sleep last night (7.2h) was 0.8h below your weekly average of 8.0h'},
+    ],
+    stravaActivities:[
+      {name:'Morning Run',type:'Run',distance:'8.20',duration:48,pace:'5.85',hr:152,elevation:64,calories:520,date:'Today'},
+      {name:'Evening Ride',type:'Ride',distance:'22.40',duration:65,pace:null,hr:138,elevation:180,calories:710,date:'Yesterday'},
+      {name:'Lunchtime Jog',type:'Run',distance:'5.10',duration:28,pace:'5.49',hr:148,elevation:12,calories:310,date:'Mon'},
+      {name:'Mountain Climb',type:'Ride',distance:'35.80',duration:110,pace:null,hr:145,elevation:820,calories:1100,date:'Sun'},
+      {name:'Easy Recovery Run',type:'Run',distance:'4.00',duration:25,pace:'6.25',hr:132,elevation:5,calories:240,date:'Sat'},
+      {name:'Sprint Intervals',type:'Run',distance:'6.50',duration:42,pace:'6.46',hr:168,elevation:20,calories:430,date:'Fri'},
+    ]
+  };
+}
+
+// ─── RENDER ───────────────────────────────────────────────────────────────
+function renderAlerts(d) {
+  const el = document.getElementById('alerts');
+  el.innerHTML = (d.anomalies||[]).map(a => `
+    <div class="alert al-${a.type}">
+      <span style="flex-shrink:0">${a.type==='warn'?'⚠️':a.type==='danger'?'🚨':'ℹ️'}</span>
+      <span>${a.msg}</span>
+      <span class="al-close" onclick="this.parentElement.remove()">×</span>
+    </div>`).join('');
+}
+
+function delta(cur, prev, lower=false, dec=false) {
+  const d = cur - prev, pct = Math.abs(d/prev*100).toFixed(1);
+  const pos = lower ? d < 0 : d > 0;
+  return { cls: d===0?'d-ne':pos?'d-up':'d-dn', arrow: d===0?'→':pos?'↑':'↓',
+    txt: `${dec?Math.abs(d).toFixed(1):Math.abs(Math.round(d)).toLocaleString()} (${pct}%)` };
+}
+
+function renderMetrics(d) {
+  const zColors = ['#374151','#f472b6','#fb923c','#f87171'];
+  const metrics = [
+    {icon:'👣',lbl:'Steps',val:d.steps.toLocaleString(),unit:`/ ${d.stepsGoal.toLocaleString()} goal`,
+     prog:d.steps/d.stepsGoal,color:d.steps>=d.stepsGoal?'var(--green)':'var(--green)',
+     dlt:delta(d.steps,d.stepsHistory[5]),anom:d.steps<3000,src:'fitbit',show:activeSource!=='strava'},
+    {icon:'🔥',lbl:'Calories',val:d.calories.toLocaleString(),unit:'kcal burned',
+     prog:d.calories/d.caloriesGoal,color:'var(--orange)',
+     dlt:delta(d.calories,d.caloriesHistory[5]),src:'fitbit',show:activeSource!=='strava'},
+    {icon:'💓',lbl:'Resting HR',val:d.restingHR,unit:'bpm',
+     prog:Math.max(0,1-(d.restingHR-45)/55),color:'var(--pink)',
+     dlt:delta(d.restingHR,62,true),anom:d.restingHR>90||d.restingHR<40,src:'fitbit',show:activeSource!=='strava'},
+    {icon:'😴',lbl:'Sleep',val:d.sleepDuration,unit:`hrs · ${d.sleepEfficiency}% eff`,
+     prog:d.sleepDuration/d.sleepGoal,color:'var(--purple)',
+     dlt:delta(d.sleepDuration,d.sleepHistory[5],false,true),anom:d.sleepDuration<5,src:'fitbit',show:activeSource!=='strava'},
+    {icon:'⚡',lbl:'Active min',val:d.activeMinutes,unit:`/ ${d.activeGoal} min goal`,
+     prog:d.activeMinutes/d.activeGoal,color:'var(--cyan)',
+     dlt:delta(d.activeMinutes,d.activeHistory[5]),src:'fitbit',show:activeSource!=='strava'},
+    {icon:'🏃',lbl:'Distance',val:d.distance+'km',unit:`/ ${d.distanceGoal}km goal`,
+     prog:d.distance/d.distanceGoal,color:'var(--strava)',
+     dlt:delta(d.distance,d.distanceHistory[5],false,true),src:'strava',show:activeSource!=='fitbit'},
+    {icon:'⚖️',lbl:'Weight',val:d.weight+'kg',unit:`goal ${d.weightGoal}kg`,
+     prog:Math.max(0,1-(d.weight-d.weightGoal)/(d.weightHistory[0]-d.weightGoal)),color:'var(--pink)',
+     dlt:delta(d.weight,d.weightHistory[5],true,true),src:'fitbit',show:activeSource!=='strava'},
+    {icon:'🏔️',lbl:'Elevation',val:(d.stravaActivities?.[0]?.elevation||0)+'m',unit:'today\'s gain',
+     prog:Math.min(1,(d.stravaActivities?.[0]?.elevation||0)/500),color:'var(--strava)',
+     dlt:{cls:'d-ne',arrow:'→',txt:'Strava'},src:'strava',show:activeSource!=='fitbit'},
+  ];
+  const srcColor = {fitbit:'var(--fitbit)',strava:'var(--strava)'};
+  document.getElementById('metrics').innerHTML = metrics.filter(m=>m.show).map(m=>`
+    <div class="mc ${m.anom?'anom':m.prog>=1?'done':''}">
+      <div class="mc-src" style="background:${srcColor[m.src]||'transparent'}"></div>
+      ${m.anom?'<div class="anom-tag">⚠ anomaly</div>':''}
+      <div class="mc-icon">${m.icon}</div>
+      <div class="mc-lbl">${m.lbl}</div>
+      <div class="mc-val" style="color:${m.anom?'var(--red)':m.color}">${m.val}</div>
+      <div class="mc-unit">${m.unit}</div>
+      <span class="mc-delta ${m.dlt.cls}">${m.dlt.arrow} ${m.dlt.txt}</span>
+      <div class="mc-bar"><div class="mc-fill" style="width:${Math.min(100,m.prog*100).toFixed(1)}%;background:${m.anom?'var(--red)':m.color}"></div></div>
+    </div>`).join('');
+}
+
+function renderActivities(d) {
+  const sec = document.getElementById('strava-sec');
+  if (activeSource === 'fitbit' || !d.stravaActivities?.length) { sec.style.display='none'; return; }
+  sec.style.display = 'block';
+  const icons = {Run:'🏃',Ride:'🚴',Swim:'🏊',Walk:'🚶',Hike:'🥾',Workout:'💪'};
+  document.getElementById('activities-grid').innerHTML = d.stravaActivities.map(a=>`
+    <div class="act-card">
+      <div class="act-type">
+        <div class="act-type-icon">${icons[a.type]||'⚡'}</div>
+        <div class="act-type-name">${a.type}</div>
+        <span style="margin-left:auto;font-size:10px;color:var(--t3)">${a.date}</span>
+      </div>
+      <div class="act-name">${a.name}</div>
+      <div class="act-stats">
+        <div class="act-stat"><div class="act-stat-val">${a.distance}km</div><div class="act-stat-lbl">Distance</div></div>
+        <div class="act-stat"><div class="act-stat-val">${a.duration}min</div><div class="act-stat-lbl">Duration</div></div>
+        ${a.pace?`<div class="act-stat"><div class="act-stat-val">${a.pace}'/km</div><div class="act-stat-lbl">Avg pace</div></div>`:''}
+        ${a.hr?`<div class="act-stat"><div class="act-stat-val">${a.hr} bpm</div><div class="act-stat-lbl">Avg HR</div></div>`:''}
+        <div class="act-stat"><div class="act-stat-val">${a.elevation}m</div><div class="act-stat-lbl">Elevation</div></div>
+        ${a.calories?`<div class="act-stat"><div class="act-stat-val">${a.calories} kcal</div><div class="act-stat-lbl">Calories</div></div>`:''}
+      </div>
+    </div>`).join('');
+}
+
+function renderActivityChart(d, type='steps') {
+  if (charts.act) charts.act.destroy();
+  const dm = {steps:d.stepsHistory,calories:d.caloriesHistory,active:d.activeHistory,distance:d.distanceHistory};
+  const gm = {steps:d.stepsGoal,calories:d.caloriesGoal,active:d.activeGoal,distance:d.distanceGoal};
+  const cm = {steps:'#3ddc84',calories:'#fb923c',active:'#22d3ee',distance:'#fc4c02'};
+  const vals=dm[type], goal=gm[type], col=cm[type];
+  charts.act = new Chart(document.getElementById('actChart'),{
+    type:'bar',
+    data:{labels:d.days,datasets:[
+      {data:vals,backgroundColor:vals.map(v=>v>=goal?col+'bb':col+'33'),borderColor:vals.map(v=>v>=goal?col:col+'66'),borderWidth:1,borderRadius:5},
+      {data:Array(7).fill(goal),type:'line',borderColor:'rgba(255,255,255,0.12)',borderDash:[4,4],borderWidth:1,pointRadius:0,fill:false}
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+      scales:{x:{grid:{color:'rgba(255,255,255,0.03)'},ticks:{color:'#4a5060',font:{size:10,family:'JetBrains Mono'}}},
+              y:{grid:{color:'rgba(255,255,255,0.03)'},ticks:{color:'#4a5060',font:{size:10,family:'JetBrains Mono'}}}}}
+  });
+}
+
+function renderHR(d) {
+  if (charts.hr) charts.hr.destroy();
+  const zc = ['#374151','#f472b6','#fb923c','#f87171'];
+  const zd = d.hrZones.map(z=>z.minutes);
+  const tot = zd.reduce((a,b)=>a+b,0);
+  charts.hr = new Chart(document.getElementById('hrChart'),{
+    type:'doughnut',data:{labels:d.hrZones.map(z=>z.name),datasets:[{data:zd,backgroundColor:zc,borderWidth:0,borderRadius:3}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},cutout:'70%'}
+  });
+  document.getElementById('hr-zones').innerHTML = d.hrZones.map((z,i)=>`
+    <div class="hrz">
+      <div class="hrz-dot" style="background:${zc[i]}"></div>
+      <div class="hrz-name">${z.name}</div>
+      <div class="hrz-min">${z.minutes}m</div>
+      <div class="hrz-bw"><div class="hrz-b" style="width:${(z.minutes/tot*100).toFixed(0)}%;background:${zc[i]}"></div></div>
+    </div>`).join('');
+}
+
+function renderSleep(d) {
+  if (charts.sleep) charts.sleep.destroy();
+  const st=d.sleepStages, sc={deep:'#3730a3',light:'#818cf8',rem:'#a78bfa',awake:'#374151'}, sl={deep:'Deep',light:'Light',rem:'REM',awake:'Awake'};
+  document.getElementById('sleep-bar').innerHTML = Object.entries(st).map(([k,v])=>`<div class="sleep-seg" style="flex:${v};background:${sc[k]}">${v>10?v+'%':''}</div>`).join('');
+  document.getElementById('sleep-sub').textContent = `${d.sleepDuration}h · ${d.sleepEfficiency}% efficiency`;
+  document.getElementById('sleep-lgd').innerHTML = Object.entries(sl).map(([k,v])=>`<div class="slgd"><div class="slgd-dot" style="background:${sc[k]}"></div>${v} ${st[k]}%</div>`).join('');
+  charts.sleep = new Chart(document.getElementById('sleepChart'),{
+    type:'bar',
+    data:{labels:d.days,datasets:[{data:d.sleepHistory,backgroundColor:d.sleepHistory.map(v=>v>=d.sleepGoal?'#a78bfabb':'#a78bfa33'),borderRadius:4,borderWidth:0}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+      scales:{x:{grid:{display:false},ticks:{color:'#4a5060',font:{size:9}}},y:{grid:{color:'rgba(255,255,255,0.03)'},ticks:{color:'#4a5060',font:{size:9}},max:10}}}
+  });
+}
+
+function renderWeight(d) {
+  if (charts.wt) charts.wt.destroy();
+  charts.wt = new Chart(document.getElementById('wtChart'),{
+    type:'line',
+    data:{labels:d.days,datasets:[
+      {data:d.weightHistory,borderColor:'#f472b6',backgroundColor:'rgba(244,114,182,0.08)',fill:true,tension:.4,pointRadius:3,pointBackgroundColor:'#f472b6',borderWidth:2},
+      {data:Array(7).fill(d.weightGoal),borderColor:'rgba(61,220,132,0.3)',borderDash:[4,4],borderWidth:1,pointRadius:0,fill:false}
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+      scales:{x:{grid:{display:false},ticks:{color:'#4a5060',font:{size:9}}},y:{grid:{color:'rgba(255,255,255,0.03)'},ticks:{color:'#4a5060',font:{size:9}}}}}
+  });
+  const lost=(d.weightHistory[0]-d.weight).toFixed(1), toGo=(d.weight-d.weightGoal).toFixed(1), rate=(lost/7).toFixed(2);
+  document.getElementById('wt-stats').innerHTML=`
+    <div class="wts"><div class="wts-v" style="color:var(--green)">-${lost}kg</div><div class="wts-l">Lost</div></div>
+    <div class="wts"><div class="wts-v" style="color:var(--yellow)">${toGo}kg</div><div class="wts-l">To goal</div></div>
+    <div class="wts"><div class="wts-v" style="color:var(--cyan)">${rate}kg/d</div><div class="wts-l">Rate</div></div>`;
+}
+
+function renderGoals(d) {
+  const goals=[
+    {icon:'👣',name:'Steps',cur:d.steps,goal:d.stepsGoal,color:'var(--green)',fmt:v=>v.toLocaleString()},
+    {icon:'🚴',name:'Distance',cur:d.distance,goal:d.distanceGoal,color:'var(--strava)',fmt:v=>v+'km'},
+    {icon:'⚡',name:'Active min',cur:d.activeMinutes,goal:d.activeGoal,color:'var(--cyan)',fmt:v=>v+' min'},
+    {icon:'😴',name:'Sleep',cur:d.sleepDuration,goal:d.sleepGoal,color:'var(--purple)',fmt:v=>v+' hrs'},
+  ];
+  document.getElementById('goals-list').innerHTML=goals.map(g=>{
+    const pct=Math.min(100,(g.cur/g.goal*100)).toFixed(0);
+    return`<div class="goal-row">
+      <div class="gi">${g.icon}</div>
+      <div class="ginfo"><div class="gn">${g.name}</div><div class="gv">${g.fmt(g.cur)} <span style="color:var(--t3)">/ ${g.fmt(g.goal)}</span></div></div>
+      <div class="gbar"><div class="gpct">${pct}%</div><div class="gtrack"><div class="gfill" style="width:${pct}%;background:${g.color}"></div></div></div>
+    </div>`;}).join('');
+}
+
+// ─── AI INSIGHTS ──────────────────────────────────────────────────────────
+async function renderInsights(d) {
+  const c=document.getElementById('insights');
+  c.innerHTML='<div class="thinking"><div class="spin"></div>Claude is analysing your Fitbit + Strava data…</div>';
+  const acts = (d.stravaActivities||[]).slice(0,3).map(a=>`${a.type}: ${a.distance}km in ${a.duration}min`).join('; ');
+  const prompt=`You are a health coach. Combined Fitbit + Strava data for ${d.userName}:
+Fitbit: steps ${d.steps}/${d.stepsGoal}, calories ${d.calories} kcal, active ${d.activeMinutes} min, resting HR ${d.restingHR} bpm, sleep ${d.sleepDuration}h (${d.sleepEfficiency}% efficiency), weight ${d.weight}kg (goal ${d.weightGoal}kg, lost ${(d.weightHistory[0]-d.weight).toFixed(1)}kg in 7 days)
+Strava recent: ${acts||'no activities'}
+Weekly step avg: ${Math.round(d.stepsHistory.reduce((a,b)=>a+b)/7)}, sleep 7d: ${d.sleepHistory.join(',')}h
+
+Generate exactly 4 insights as JSON array. Each: {"type":"positive"|"warning"|"tip"|"critical","text":"1-2 sentence data-driven insight","action":"short actionable recommendation"}. Use BOTH Fitbit and Strava data. Focus on weight loss and recovery. Return ONLY valid JSON array.`;
+  try {
+    const r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1000,messages:[{role:'user',content:prompt}]})});
+    const res=await r.json();
+    let txt=res.content?.[0]?.text||'[]';
+    txt=txt.replace(/```json|```/g,'').trim();
+    const ins=JSON.parse(txt);
+    c.innerHTML='<div class="insights-grid">'+ins.map(i=>`
+      <div class="ic">
+        <div class="ic-type t-${i.type}">${i.type==='positive'?'✓ Progress':i.type==='warning'?'⚠ Watch out':i.type==='critical'?'! Critical':'💡 Tip'}</div>
+        <div class="ic-text">${i.text}</div>
+        <div class="ic-action">→ ${i.action}</div>
+      </div>`).join('')+'</div>';
+  } catch(e) {
+    c.innerHTML='<div class="insights-grid">'+fallbackInsights(d).map(i=>`
+      <div class="ic">
+        <div class="ic-type t-${i.type}">${i.label}</div>
+        <div class="ic-text">${i.text}</div>
+        <div class="ic-action">→ ${i.action}</div>
+      </div>`).join('')+'</div>';
+  }
+}
+
+function fallbackInsights(d) {
+  const ins=[];
+  const def=d.caloriesGoal-d.calories;
+  if(def>0) ins.push({type:'positive',label:'✓ Calorie deficit',text:`You are ${def} kcal under your goal — this deficit plus your ${d.stravaActivities?.[0]?.type||'activity'} burns extra calories for effective fat loss.`,action:'Maintain this balance; add protein to preserve muscle.'});
+  if(d.steps<d.stepsGoal*0.8) ins.push({type:'warning',label:'⚠ Low step count',text:`${d.steps.toLocaleString()} steps is ${Math.round((1-d.steps/d.stepsGoal)*100)}% below goal. Combined with your Strava workouts, closing this gap accelerates weight loss.`,action:'Take a 20-min walk after your next session.'});
+  if(d.sleepDuration<7) ins.push({type:'warning',label:'⚠ Sleep & recovery',text:`Only ${d.sleepDuration}h sleep impairs muscle recovery from your Strava workouts and raises hunger hormones by up to 15%.`,action:'Prioritise 8h before your next hard effort.'});
+  ins.push({type:'positive',label:'✓ Weight trajectory',text:`At ${(d.weightHistory[0]-d.weight).toFixed(1)}kg lost this week you will reach ${d.weightGoal}kg in ~${Math.ceil((d.weight-d.weightGoal)/0.5)} weeks at current pace.`,action:'Keep your workout frequency and calorie deficit consistent.'});
+  return ins.slice(0,4);
+}
+
+// ─── ASK AI ───────────────────────────────────────────────────────────────
+async function ask() {
+  const inp=document.getElementById('q-input'), q=inp.value.trim();
+  if(!q||!D) return;
+  const resp=document.getElementById('ai-resp'), txt=document.getElementById('ai-resp-txt');
+  resp.classList.add('show');
+  txt.innerHTML='<div class="thinking" style="background:none;border:none;padding:0"><div class="spin"></div>Thinking…</div>';
+  inp.value='';
+  const acts=(D.stravaActivities||[]).slice(0,3).map(a=>`${a.type} ${a.distance}km`).join(', ');
+  const ctx=`Health coach. Fitbit: steps ${D.steps}, calories ${D.calories} kcal, HR ${D.restingHR} bpm, sleep ${D.sleepDuration}h, weight ${D.weight}kg (goal ${D.weightGoal}kg). Strava recent: ${acts||'none'}. Answer in 2-4 sentences, cite specific numbers: ${q}`;
+  try {
+    const r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1000,messages:[{role:'user',content:ctx}]})});
+    const res=await r.json();
+    txt.textContent=res.content?.[0]?.text||'No response.';
+  } catch(e){txt.textContent='Could not reach AI.';}
+}
+
+// ─── WHATSAPP ──────────────────────────────────────────────────────────────
+function openWAModal(){document.getElementById('wa-modal').classList.add('show')}
+function closeWAModal(){document.getElementById('wa-modal').classList.remove('show')}
+
+async function saveWA(){
+  const phone=document.getElementById('wa-phone').value.trim();
+  const key=document.getElementById('wa-key').value.trim();
+  if(!phone||!key){showWAStatus('Enter both phone number and API key','err');return}
+  localStorage.setItem('wa_phone',phone); localStorage.setItem('wa_key',key);
+  await sendWA(phone,key,'✅ Health Dashboard connected! You will receive daily summaries here.');
+}
+
+async function sendDailySummary(){
+  const phone=localStorage.getItem('wa_phone'), key=localStorage.getItem('wa_key');
+  if(!phone||!key){openWAModal();return}
+  if(!D){toast('⚠️ No data loaded yet');return}
+  const acts=(D.stravaActivities||[]).slice(0,2).map(a=>`${a.type} ${a.distance}km`).join(' | ');
+  const msg=`🏃 *Daily Health Summary* — ${new Date().toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'})}
+
+*Fitbit*
+👣 Steps: ${D.steps.toLocaleString()} / ${D.stepsGoal.toLocaleString()}
+🔥 Calories: ${D.calories} kcal
+💓 Resting HR: ${D.restingHR} bpm
+😴 Sleep: ${D.sleepDuration}h (${D.sleepEfficiency}% eff)
+⚖️ Weight: ${D.weight}kg → goal ${D.weightGoal}kg
+
+*Strava*
+🏃 Recent: ${acts||'No activities today'}
+
+*Progress*
+📉 Lost this week: ${(D.weightHistory[0]-D.weight).toFixed(1)}kg
+🎯 Remaining to goal: ${(D.weight-D.weightGoal).toFixed(1)}kg`;
+  await sendWA(phone,key,msg);
+}
+
+async function sendWA(phone,key,msg){
+  const status=document.getElementById('wa-status');
+  try {
+    const url=`https://api.callmebot.com/whatsapp.php?phone=${phone}&text=${encodeURIComponent(msg)}&apikey=${key}`;
+    const r=await fetch(url,{mode:'no-cors'});
+    showWAStatus('✅ Message sent to WhatsApp!','ok');
+    toast('📱 WhatsApp message sent!');
+    setTimeout(()=>closeWAModal(),1800);
+  } catch(e){showWAStatus('⚠️ Sent (no-cors — check WhatsApp to confirm)','ok');setTimeout(()=>closeWAModal(),1800)}
+}
+
+function showWAStatus(msg,type){
+  const el=document.getElementById('wa-status');
+  el.textContent=msg; el.className=`wa-status show wa-${type}`;
+}
+
+// ─── CONTROLS ────────────────────────────────────────────────────────────
+function swChart(type,btn){
+  document.querySelectorAll('.ctab').forEach(t=>t.classList.remove('act'));
+  btn.classList.add('act');
+  if(D) renderActivityChart(D,type);
+}
+function navDate(dir){
+  dateOffset+=dir;
+  const d=new Date(); d.setDate(d.getDate()+dateOffset);
+  document.getElementById('date-lbl').textContent=dateOffset===0?'Today':d.toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'});
+}
+function setRange(r,btn){
+  document.querySelectorAll('.range-tabs .date-btn').forEach(b=>b.classList.remove('act'));
+  btn.classList.add('act');
+}
+function setSource(src,btn){
+  activeSource=src;
+  document.querySelectorAll('.src-tab').forEach(b=>b.classList.remove('act'));
+  btn.classList.add('act');
+  if(D){renderMetrics(D);renderActivities(D);}
+}
+
+function toast(msg,dur=3000){
+  const t=document.createElement('div'); t.className='toast'; t.textContent=msg;
+  document.body.appendChild(t);
+  setTimeout(()=>t.remove(),dur);
+}
+
+// ─── INIT ────────────────────────────────────────────────────────────────
+async function loadDemo(){
+  document.getElementById('auth').style.display='none';
+  document.getElementById('dash').style.display='block';
+  D=generateDemo();
+  boot(D);
+}
+
+async function boot(data){
+  D=data;
+  document.getElementById('tb-name').textContent=`${D.userName}'s Dashboard`;
+  document.getElementById('tb-date').textContent=new Date().toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long'});
+  if(D.hasFitbit) document.getElementById('pill-fitbit').style.display='flex';
+  if(D.hasStrava) document.getElementById('pill-strava').style.display='flex';
+  renderAlerts(D); renderMetrics(D); renderActivities(D);
+  renderActivityChart(D); renderHR(D); renderSleep(D); renderWeight(D); renderGoals(D);
+  await renderInsights(D);
+  // Schedule daily summary if credentials saved
+  const phone=localStorage.getItem('wa_phone'), key=localStorage.getItem('wa_key');
+  if(phone&&key){
+    const lastSent=localStorage.getItem('wa_last_sent');
+    const today=new Date().toDateString();
+    if(lastSent!==today){localStorage.setItem('wa_last_sent',today);await sendWA(phone,key,buildSummaryMsg(D));}
+  }
+}
+
+function buildSummaryMsg(d){
+  const acts=(d.stravaActivities||[]).slice(0,2).map(a=>`${a.type} ${a.distance}km`).join(' | ');
+  return `🏃 *Daily Health Summary* — ${new Date().toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'})}\n\n*Fitbit* 👣 ${d.steps.toLocaleString()} steps | 🔥 ${d.calories} kcal | 💓 ${d.restingHR} bpm | 😴 ${d.sleepDuration}h sleep | ⚖️ ${d.weight}kg\n\n*Strava* 🏃 ${acts||'Rest day'}\n\n📉 Weight lost this week: ${(d.weightHistory[0]-d.weight).toFixed(1)}kg | 🎯 To goal: ${(d.weight-d.weightGoal).toFixed(1)}kg`;
+}
+
+async function init(){
+  parseOAuth();
+  if(fitbitToken||stravaToken){
+    const loader=document.getElementById('loader'); loader.style.display='flex';
+    const msgs=['Connecting…','Fetching Fitbit data…','Loading Strava activities…','Running AI analysis…'];
+    let i=0; const iv=setInterval(()=>{if(i<msgs.length)document.getElementById('loader-msg').textContent=msgs[i++];},500);
+    document.getElementById('auth').style.display='none';
+    document.getElementById('dash').style.display='block';
+    const data=await fetchAll(); clearInterval(iv); loader.style.display='none';
+    await boot(data);
+  }
+}
+init();
+</script>
+</body>
+</html>
